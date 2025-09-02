@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Video Downloader (Sin Audio)</title>
+    <title>YouTube Video Downloader (Video + Audio Multiplexado)</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
         input, button, select { margin: 10px 0; padding: 8px; width: 100%; }
-        #resolutions { display: none; }
+        #resolutions, #status { display: none; }
+        #status { color: green; }
     </style>
 </head>
 <body>
-    <h1>Descargador de Videos de YouTube (Solo Video en MP4, Sin Audio)</h1>
+    <h1>Descargador de Videos de YouTube (Video + Audio en MP4)</h1>
     <p>Ingresa la URL del video de YouTube:</p>
     <input type="text" id="url" placeholder="Ej: https://www.youtube.com/watch?v=VD4acolLcyY" value="https://www.youtube.com/watch?v=VD4acolLcyY">
     <button onclick="fetchFormats()">Obtener Resoluciones Disponibles</button>
@@ -19,8 +20,9 @@
     <div id="resolutions">
         <p>Selecciona la resolución:</p>
         <select id="resolutionSelect"></select>
-        <button onclick="downloadVideo()">Descargar Video (Sin Audio)</button>
+        <button onclick="downloadVideo()">Descargar Video con Audio</button>
     </div>
+    <div id="status">Procesando y multiplexando el video...</div>
 
     <script>
         async function fetchFormats() {
@@ -58,9 +60,9 @@
                 return;
             }
 
-            // Iniciar descarga
+            document.getElementById('status').style.display = 'block'; // Mostrar mensaje de procesamiento
             window.location.href = `/download?url=${encodeURIComponent(url)}&itag=${itag}`;
         }
     </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'978d3981c9e66683',t:'MTc1NjgxODM4Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
