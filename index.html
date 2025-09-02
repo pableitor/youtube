@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Downloader (Sin Audio)</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        input, button, select { margin: 10px 0; padding: 8px; width: 100%; }
+        #resolutions { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Descargador de Videos de YouTube (Solo Video en MP4, Sin Audio)</h1>
+    <p>Ingresa la URL del video de YouTube:</p>
+    <input type="text" id="url" placeholder="Ej: https://www.youtube.com/watch?v=VD4acolLcyY" value="https://www.youtube.com/watch?v=VD4acolLcyY">
+    <button onclick="fetchFormats()">Obtener Resoluciones Disponibles</button>
+    
+    <div id="resolutions">
+        <p>Selecciona la resolución:</p>
+        <select id="resolutionSelect"></select>
+        <button onclick="downloadVideo()">Descargar Video (Sin Audio)</button>
+    </div>
+
+    <script>
+        async function fetchFormats() {
+            const url = document.getElementById('url').value;
+            if (!url) {
+                alert('Por favor, ingresa una URL válida.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/formats?url=${encodeURIComponent(url)}`);
+                if (!response.ok) throw new Error('Error al obtener formatos');
+                const formats = await response.json();
+
+                const select = document.getElementById('resolutionSelect');
+                select.innerHTML = ''; // Limpiar opciones previas
+                formats.forEach(format => {
+                    const option = document.createElement('option');
+                    option.value = format.itag;
+                    option.textContent = format.quality;
+                    select.appendChild(option);
+                });
+
+                document.getElementById('resolutions').style.display = 'block';
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function downloadVideo() {
+            const url = document.getElementById('url').value;
+            const itag = document.getElementById('resolutionSelect').value;
+            if (!itag) {
+                alert('Selecciona una resolución.');
+                return;
+            }
+
+            // Iniciar descarga
+            window.location.href = `/download?url=${encodeURIComponent(url)}&itag=${itag}`;
+        }
+    </script>
+</body>
+</html>
