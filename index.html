@@ -7,8 +7,10 @@
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
         input, button, select { margin: 10px 0; padding: 8px; width: 100%; }
-        #resolutions, #status { display: none; }
-        #status { color: green; }
+        #resolutions, #progress-container { display: none; }
+        .progress-bar { width: 100%; height: 20px; background: #f0f0f0; border-radius: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #4caf50; width: 0; transition: width 0.3s; }
+        .progress-label { margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -22,9 +24,26 @@
         <select id="resolutionSelect"></select>
         <button onclick="downloadVideo()">Descargar Video con Audio</button>
     </div>
-    <div id="status">Procesando y multiplexando el video...</div>
+
+    <div id="progress-container">
+        <h3>Progreso de la descarga:</h3>
+        <div>
+            <p>Descarga de video: <span id="video-progress-text">0%</span></p>
+            <div class="progress-bar"><div id="video-progress" class="progress-fill"></div></div>
+        </div>
+        <div>
+            <p>Descarga de audio: <span id="audio-progress-text">0%</span></p>
+            <div class="progress-bar"><div id="audio-progress" class="progress-fill"></div></div>
+        </div>
+        <div>
+            <p>Multiplexación: <span id="mux-progress-text">0%</span></p>
+            <div class="progress-bar"><div id="mux-progress" class="progress-fill"></div></div>
+        </div>
+    </div>
 
     <script>
+        let ws;
+
         async function fetchFormats() {
             const url = document.getElementById('url').value;
             if (!url) {
@@ -60,9 +79,31 @@
                 return;
             }
 
-            document.getElementById('status').style.display = 'block'; // Mostrar mensaje de procesamiento
+            // Resetear barras de progreso
+            document.getElementById('video-progress').style.width = '0%';
+            document.getElementById('audio-progress').style.width = '0%';
+            document.getElementById('mux-progress').style.width = '0%';
+            document.getElementById('video-progress-text').textContent = '0%';
+            document.getElementById('audio-progress-text').textContent = '0%';
+            document.getElementById('mux-progress-text').textContent = '0%';
+            document.getElementById('progress-container').style.display = 'block';
+
+            // Conectar al WebSocket
+            ws = new WebSocket(`ws://localhost:${3001}`);
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'progress') {
+                    const progressBar = document.getElementById(`${data.stage}-progress`);
+                    const progressText = document.getElementById(`${data.stage}-progress-text`);
+                    progressBar.style.width = `${data.progress}%`;
+                    progressText.textContent = `${data.progress.toFixed(2)}%`;
+                }
+            };
+            ws.onclose = () => console.log('WebSocket cerrado');
+
+            // Iniciar la descarga
             window.location.href = `/download?url=${encodeURIComponent(url)}&itag=${itag}`;
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'978d3981c9e66683',t:'MTc1NjgxODM4Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>

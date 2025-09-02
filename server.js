@@ -3,8 +3,30 @@ const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
+const WebSocket = require('ws');
 const app = express();
 const port = 3000;
+
+// Configurar WebSocket
+const wss = new WebSocket.Server({ port: 3001 });
+
+// Mantener un cliente WebSocket activo
+let wsClient = null;
+wss.on('connection', (ws) => {
+    console.log('Cliente WebSocket conectado');
+    wsClient = ws;
+    ws.on('close', () => {
+        console.log('Cliente WebSocket desconectado');
+        wsClient = null;
+    });
+});
+
+// Función para enviar progreso
+function sendProgress(stage, progress) {
+    if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+        wsClient.send(JSON.stringify({ type: 'progress', stage, progress }));
+    }
+}
 
 app.use(express.static(__dirname));
 
@@ -61,6 +83,7 @@ app.get('/download', async (req, res) => {
             videoStream.pipe(fs.createWriteStream(videoPath))
                 .on('finish', () => {
                     console.log('Video descargado en:', videoPath);
+                    sendProgress('video', 100);
                     resolve();
                 })
                 .on('error', (err) => {
@@ -68,7 +91,9 @@ app.get('/download', async (req, res) => {
                     reject(err);
                 });
             videoStream.on('progress', (chunkLength, downloaded, total) => {
-                console.log(`Progreso video: ${(downloaded / total * 100).toFixed(2)}%`);
+                const progress = (downloaded / total) * 100;
+                console.log(`Progreso video: ${progress.toFixed(2)}%`);
+                sendProgress('video', progress);
             });
         });
 
@@ -79,6 +104,7 @@ app.get('/download', async (req, res) => {
             audioStream.pipe(fs.createWriteStream(audioPath))
                 .on('finish', () => {
                     console.log('Audio descargado en:', audioPath);
+                    sendProgress('audio', 100);
                     resolve();
                 })
                 .on('error', (err) => {
@@ -86,7 +112,9 @@ app.get('/download', async (req, res) => {
                     reject(err);
                 });
             audioStream.on('progress', (chunkLength, downloaded, total) => {
-                console.log(`Progreso audio: ${(downloaded / total * 100).toFixed(2)}%`);
+                const progress = (downloaded / total) * 100;
+                console.log(`Progreso audio: ${progress.toFixed(2)}%`);
+                sendProgress('audio', progress);
             });
         });
 
@@ -98,6 +126,7 @@ app.get('/download', async (req, res) => {
         // Multiplexar video y audio con FFmpeg
         console.log('Multiplexando video y audio...');
         await new Promise((resolve, reject) => {
+            let lastProgress = 0;
             ffmpeg()
                 .input(videoPath)
                 .input(audioPath)
@@ -109,8 +138,15 @@ app.get('/download', async (req, res) => {
                     '-shortest'   // Usar la duración del flujo más corto
                 ])
                 .output(outputPath)
+                .on('progress', (progress) => {
+                    const percent = progress.percent || (lastProgress + 10); // Estimar progreso si no está disponible
+                    lastProgress = Math.min(percent, 100);
+                    console.log(`Progreso multiplexación: ${lastProgress.toFixed(2)}%`);
+                    sendProgress('mux', lastProgress);
+                })
                 .on('end', () => {
                     console.log('Multiplexación completada en:', outputPath);
+                    sendProgress('mux', 100);
                     resolve();
                 })
                 .on('error', (err) => {
@@ -158,4 +194,5 @@ app.get('/download', async (req, res) => {
 
 app.listen(port, () => {
     console.log(`Servidor corriendo en http://localhost:${port}`);
+    console.log(`WebSocket servidor corriendo en ws://localhost:3001`);
 });
